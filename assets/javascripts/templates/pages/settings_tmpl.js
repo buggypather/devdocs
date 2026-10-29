@@ -19,6 +19,20 @@ const themeOption = ({ label, value }, settings) => `\
 `;
 
 /**
+ * One added doc pack, with the button that removes it.
+ *
+ * @param {{ url: string, name: string, count: number }} pack
+ * @returns {string}
+ */
+const docPack = ({ url, name, count }) => `\
+<div class="_settings-label _doc-pack">
+  <strong>${$.escape(name)}</strong>
+  <button type="button" class="_btn-link" data-action="removePack" data-url="${$.escape(url)}">Remove</button>
+  <small>${count} ${count === 1 ? "doc" : "docs"} &middot; ${$.escape(url)}</small>
+</div>\
+`;
+
+/**
  * @param {Record<string, unknown>} settings The user's current preferences.
  * @returns {string}
  */
@@ -110,6 +124,24 @@ export const settingsPage = (settings) => `\
       }"> Number of entries shown in the sidebar before &ldquo;Show more&hellip;&rdquo;
       <small>0 shows all entries.</small>
     </label>
+  </div>
+</div>
+
+<div class="_settings-fieldset">
+  <h2 class="_settings-legend">Doc packs:</h2>
+
+  <div class="_settings-inputs">
+    ${/** @type {{ url: string, name: string, count: number }[]} */ (
+      settings.docPacks
+    )
+      .map(docPack)
+      .join("")}
+    <div class="_settings-label _doc-pack-add">
+      <input type="url" name="packUrl" class="_doc-pack-input" placeholder="github.com/someone/their-docs" aria-label="Doc pack address" autocomplete="off" spellcheck="false">
+      <button type="button" class="_btn" data-action="addPack">Add</button>
+      <small class="_doc-pack-status" role="status"></small>
+      <small>Documentation shared by anyone as a Git repository or a website. Its docs then appear in the list on the left, ready to enable.</small>
+    </div>
   </div>
 </div>
 

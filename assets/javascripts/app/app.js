@@ -2,6 +2,7 @@
 
 import { config } from "./config.js";
 import { DB } from "./db.js";
+import { DocPacks } from "./doc_packs.js";
 import { Router } from "./router.js";
 import { AppServiceWorker } from "./serviceworker.js";
 import { Settings } from "./settings.js";
@@ -81,6 +82,7 @@ export class App extends Events {
       this.serviceWorker = new AppServiceWorker();
     }
     this.settings = new Settings();
+    this.docPacks = new DocPacks(this.localStorage);
     this.db = new DB();
 
     this.settings.initLayout();
@@ -181,10 +183,10 @@ export class App extends Events {
     delete this.DOC;
   }
 
-  /** Boots with every doc in the manifest, enabled or not. */
+  /** Boots with every doc in the manifest and the added packs, enabled or not. */
   async bootAll() {
     const docs = this.settings.getDocs();
-    for (var doc of this.DOCS) {
+    for (var doc of this.DOCS.concat(this.docPacks.docs())) {
       (docs.includes(/** @type {string} */ (doc.slug)) ? this.docs : this.disabledDocs).add(doc);
     }
     delete this.DOCS;
@@ -400,6 +402,7 @@ export class App extends Events {
     }
     new News();
     new Updates();
+    this.docPacks.refresh();
     return (this.updateChecker = new UpdateChecker());
   }
 

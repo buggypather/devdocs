@@ -2,6 +2,8 @@
 
 import { app } from "../../app/app.js";
 import { Settings } from "../../app/settings.js";
+import { Docs } from "../../collections/docs.js";
+import { packDocs } from "../../lib/doc_packs.js";
 import { resetAnalytics } from "../../lib/page.js";
 import { $ } from "../../lib/util.js";
 import { Notif } from "../misc/notif.js";
@@ -45,6 +47,11 @@ export class SettingsPage extends View {
     settings.monoFont = app.settings.get("monoFont");
     settings.customCss = app.settings.get("customCss");
     settings.autoSupported = app.settings.autoSupported;
+    settings.docPacks = app.docPacks.all().map((pack) => ({
+      url: pack.url,
+      name: pack.name,
+      count: packDocs(pack).length,
+    }));
     for (var layout of Settings.LAYOUTS) {
       settings[layout] = app.settings.hasLayout(layout);
     }
@@ -140,10 +147,73 @@ export class SettingsPage extends View {
     reader.readAsText(file);
   }
 
+  /**
+   * Downloads the pack typed into the field and reloads, so that its docs show
+   * in the list.
+   */
+  addPack() {
+    const input = /** @type {HTMLInputElement} */ (this.find("._doc-pack-input"));
+    const button = /** @type {HTMLButtonElement} */ (this.find('[data-action="addPack"]'));
+    if (button.disabled) {
+      return;
+    }
+    button.disabled = true;
+    this.setPackStatus("Downloading the pack…");
+
+    app.docPacks.add(input.value, (error, pack) => {
+      if (error) {
+        button.disabled = false;
+        this.setPackStatus(error.message, true);
+        return;
+      }
+      const count = packDocs(pack).length;
+      this.setPackStatus(
+        `Added “${pack.name}” with ${count} ${count === 1 ? "doc" : "docs"}. Reloading…`,
+      );
+      window.location.reload();
+    });
+  }
+
+  /**
+   * Removes a pack, with its docs and their offline copies, and reloads.
+   *
+   * @param {string} url
+   */
+  removePack(url) {
+    const pack = app.docPacks.all().find((pack) => pack.url === url);
+    if (
+      !pack ||
+      !window.confirm(`Remove “${pack.name}” and its docs from DevDocs?`)
+    ) {
+      return;
+    }
+    app.docPacks.remove(url);
+
+    const slugs = new Set(packDocs(pack).map((doc) => doc.slug));
+    app.settings.setDocs(app.settings.getDocs().filter((slug) => !slugs.has(slug)));
+    new Docs(app.docs.all().filter((doc) => slugs.has(doc.slug))).uninstall(() =>
+      window.location.reload(),
+    );
+  }
+
+  /**
+   * @param {string} message
+   * @param {boolean} [isError]
+   */
+  setPackStatus(message, isError = false) {
+    const status = this.find("._doc-pack-status");
+    status.textContent = message;
+    status.classList.toggle("_error", isError);
+  }
+
   /** @param {ViewInputEvent} event */
   onChange(event) {
     const input = event.target;
     switch (input.name) {
+      case "packUrl":
+        // Not a preference: it's only read when the pack is added.
+        event.stopPropagation();
+        break;
       case "theme":
         this.setTheme(input.value);
         break;
@@ -185,13 +255,20 @@ export class SettingsPage extends View {
 
   /**
    * Keeps the keyboard shortcuts out of the CSS field, where Enter and the
-   * arrow keys edit the text.
+   * arrow keys edit the text, and out of the pack address field.
    *
    * @param {ViewKeyboardEvent} event
    */
   onKeydown(event) {
     if (event.target.tagName === "TEXTAREA") {
       event.stopPropagation();
+    } else if (/** @type {HTMLInputElement} */ (event.target).name === "packUrl") {
+      // Enter adds the pack rather than saving the preferences.
+      event.stopPropagation();
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.addPack();
+      }
     }
   }
 
@@ -202,6 +279,14 @@ export class SettingsPage extends View {
       case "export":
         $.stopEvent(event);
         this.export();
+        break;
+      case "addPack":
+        $.stopEvent(event);
+        this.addPack();
+        break;
+      case "removePack":
+        $.stopEvent(event);
+        this.removePack(target.getAttribute("data-url"));
         break;
     }
   }

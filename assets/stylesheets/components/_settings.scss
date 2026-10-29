@@ -81,6 +81,27 @@
   @extend %border-box;
 }
 
+._doc-pack > small {
+  margin-left: 0;
+  overflow-wrap: anywhere;
+}
+
+._doc-pack-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+  align-items: center;
+
+  > small { flex-basis: 100%; margin-left: 0; }
+  > ._doc-pack-status:empty { display: none; }
+  > ._doc-pack-status._error { color: var(--textColorRed); }
+}
+
+._doc-pack-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
 @media (max-width: 80rem) {
   ._setting-max-width { display: none; }
 }
