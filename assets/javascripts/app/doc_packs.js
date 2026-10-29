@@ -49,17 +49,22 @@ export class DocPacks {
   add(input, callback) {
     const url = packUrl(input);
     if (!url) {
+      const insecure = /^\s*http:\/\//i.test(input);
       callback(
-        new DocPackError(
-          /^\s*http:\/\//i.test(input)
-            ? "The address has to start with https://, so that nobody can change the pack on its way to you."
-            : "That isn't a web address. Paste a link such as github.com/someone/their-docs.",
-        ),
+        insecure
+          ? new DocPackError(
+              "The address has to start with https://, so that nobody can change the pack on its way to you.",
+              "insecure",
+            )
+          : new DocPackError(
+              "That isn't a web address. Paste a link such as github.com/someone/their-docs.",
+              "address",
+            ),
       );
       return;
     }
     if (this.all().some((pack) => pack.url === url)) {
-      callback(new DocPackError("That pack is already added."));
+      callback(new DocPackError("That pack is already added.", "duplicate"));
       return;
     }
 
@@ -72,6 +77,7 @@ export class DocPacks {
         callback(
           new DocPackError(
             "The pack couldn't be saved, because this browser blocks local storage for DevDocs.",
+            "storage",
           ),
         );
         return;
@@ -135,14 +141,16 @@ export class DocPacks {
         pack.fetchedAt = Date.now();
         callback(null, pack);
       },
-      error: (type) => {
-        callback(
-          new DocPackError(
-            type === "invalid"
-              ? `${manifestUrl} isn't valid JSON.`
-              : `Couldn't download ${manifestUrl}. Check the address, and that the site lets other sites read its files (GitHub does).`,
-          ),
-        );
+      error: (type, xhr) => {
+        if (type === "invalid") {
+          callback(new DocPackError(`${manifestUrl} isn't valid JSON.`, "invalid"));
+        } else if (xhr?.status === 404) {
+          callback(new DocPackError(`There's no ${MANIFEST_FILENAME} at ${url}.`, "missing"));
+        } else {
+          // Status 0: the site is down, or doesn't let other sites read it
+          // (most websites), which the browser doesn't tell apart.
+          callback(new DocPackError(`Couldn't download ${manifestUrl}.`, "unreachable"));
+        }
       },
     });
   }

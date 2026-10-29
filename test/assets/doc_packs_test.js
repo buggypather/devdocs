@@ -7,6 +7,7 @@ import { DocPacks } from "../../assets/javascripts/app/doc_packs.js";
 import {
   cleanIndex,
   DocPackError,
+  findBuiltInDocs,
   packDocs,
   packId,
   packUrl,
@@ -40,6 +41,9 @@ test("addresses that can't be a pack are refused", () => {
     "",
     "   ",
     "not a url",
+    "my docs",
+    "notes",
+    "https://intranet/docs",
     "http://example.com/docs", // plain http, except on this computer
     "javascript:alert(1)",
     "file:///C:/docs",
@@ -219,9 +223,58 @@ test("added packs are stored, listed and removed", async () => {
   );
 
   assert.match((await add("https://github.com/someone/docs")).error.message, /already added/);
-  assert.match((await add("not a url")).error.message, /isn't a web address/);
-  assert.match((await add("http://example.com/docs")).error.message, /https:\/\//);
+  assert.equal((await add("https://github.com/someone/docs")).error.reason, "duplicate");
+  assert.equal((await add("not a url")).error.reason, "address");
+  assert.equal((await add("http://example.com/docs")).error.reason, "insecure");
 
   assert.equal(packs.remove(PACK_URL)?.url, PACK_URL);
   assert.deepEqual(packs.all(), []);
+});
+
+test("a failed download says whether the pack is missing or unreachable", async () => {
+  const packs = new DocPacks(/** @type {any} */ (memoryStore()));
+  const ajaxError = (status) =>
+    new Promise((resolve) => {
+      // A request that fails with the given status, as ajax() sees it.
+      globalThis.XMLHttpRequest = /** @type {any} */ (
+        class {
+          readyState = 0;
+          status = 0;
+          responseText = "";
+          onreadystatechange = () => {};
+          open() {}
+          setRequestHeader() {}
+          send() {
+            this.readyState = 4;
+            this.status = status;
+            setTimeout(() => this.onreadystatechange());
+          }
+        }
+      );
+      packs.add("https://example.com/pack/", (error) => resolve(error));
+    });
+
+  try {
+    assert.equal((await ajaxError(404)).reason, "missing");
+    assert.equal((await ajaxError(0)).reason, "unreachable");
+  } finally {
+    delete globalThis.XMLHttpRequest;
+  }
+});
+
+test("an address that a built-in doc comes from is recognized", () => {
+  const docs = [
+    { name: "Vue", links: { home: "https://vuejs.org/", code: "https://github.com/vuejs/core" } },
+    { name: "Vue Router", links: { home: "https://router.vuejs.org/" } },
+    { name: "Git", links: { home: "https://git-scm.com/docs" } },
+    { name: "Pack doc" },
+  ];
+
+  assert.deepEqual(findBuiltInDocs("vuejs.org/guide/introduction.html", docs), ["Vue"]);
+  assert.deepEqual(findBuiltInDocs("https://www.github.com/vuejs/core", docs), ["Vue"]);
+  assert.deepEqual(findBuiltInDocs("https://git-scm.com/docs/git-commit", docs), ["Git"]);
+  assert.deepEqual(findBuiltInDocs("https://git-scm.com/", docs), ["Git"]);
+  assert.deepEqual(findBuiltInDocs("https://git-scm.com/book", docs), []);
+  assert.deepEqual(findBuiltInDocs("https://docs.github.com/en/pages", docs), []);
+  assert.deepEqual(findBuiltInDocs("", docs), []);
 });

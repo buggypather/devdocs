@@ -33,6 +33,42 @@ const docPack = ({ url, name, count }) => `\
 `;
 
 /**
+ * What to do when an address couldn't be added as a doc pack.
+ *
+ * @param {object} help
+ * @param {string} help.message What went wrong.
+ * @param {string} help.reason A `DocPackErrorReason`.
+ * @param {boolean} help.isGitHub Whether the address is a GitHub repository.
+ * @param {string[]} help.builtIn Built-in docs at that address.
+ * @param {string} help.guideUrl How to make a pack.
+ * @param {string} help.findUrl Where shared packs are listed.
+ * @returns {string}
+ */
+export const docPackHelp = ({ message, reason, isGitHub, builtIn, guideUrl, findUrl }) => {
+  let html = `<p class="_doc-pack-error">${$.escape(message)}</p>`;
+
+  if (builtIn.length) {
+    html += `<p>DevDocs already has <strong>${builtIn.map($.escape).join("</strong>, <strong>")}</strong>: tick it in the list on the left, then save.</p>`;
+  }
+
+  if (reason !== "missing" && reason !== "unreachable") {
+    return html;
+  }
+
+  if (isGitHub) {
+    html += `<p>This repository isn't a doc pack: a pack has a <code>docs.json</code> at the top. If the pack is in a folder of the repository, open that folder on GitHub and paste its address.</p>`;
+  } else {
+    html += `<p>If this is a documentation website rather than a doc pack: DevDocs can't read websites directly, because browsers don't let one site read another's pages, and a website's pages need tidying before they can be searched. Ways to get these docs:</p>
+<ul>
+  <li><a href="${findUrl}" target="_blank" rel="noopener">Find a doc pack</a> someone has already shared.</li>
+  <li>Look for the website's source on GitHub: many doc sites are written in a public repository, and some include a doc pack.</li>
+  <li><a href="${guideUrl}" target="_blank" rel="noopener">Make a doc pack</a> of it: from pages you write, or from the website with DevDocs' scrapers.</li>
+</ul>`;
+  }
+  return html;
+};
+
+/**
  * @param {Record<string, unknown>} settings The user's current preferences.
  * @returns {string}
  */
@@ -139,8 +175,12 @@ export const settingsPage = (settings) => `\
     <div class="_settings-label _doc-pack-add">
       <input type="url" name="packUrl" class="_doc-pack-input" placeholder="github.com/someone/their-docs" aria-label="Doc pack address" autocomplete="off" spellcheck="false">
       <button type="button" class="_btn" data-action="addPack">Add</button>
+      <small class="_doc-pack-preview"></small>
       <small class="_doc-pack-status" role="status"></small>
-      <small>Documentation shared by anyone as a Git repository or a website. Its docs then appear in the list on the left, ready to enable.</small>
+      <div class="_doc-pack-help" role="alert"></div>
+      <small>Documentation shared by anyone as a doc pack: a Git repository or a website laid out for DevDocs. Its docs then appear in the list on the left, ready to enable. <a href="${$.escape(
+        String(settings.docPackGuideUrl),
+      )}" target="_blank" rel="noopener">What's a doc pack?</a></small>
     </div>
   </div>
 </div>

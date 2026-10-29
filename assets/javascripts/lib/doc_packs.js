@@ -47,9 +47,29 @@ const MARKUP_RGX = /[<>"'`\u0000-\u001f]/g;
  */
 const SAFE_PATH_RGX = /^[^\s"'`<>\\]+$/;
 
+/** Where to send people who want to find or make a pack. */
+export const GUIDE_URL =
+  "https://github.com/buggypather/devdocs/blob/custom-doc-packs/docs/doc-packs.md";
+export const FIND_PACKS_URL = "https://github.com/topics/devdocs-pack";
+
+/**
+ * Why a pack couldn't be added, so the preferences can say what to do next.
+ *
+ * @typedef {"address" | "insecure" | "duplicate" | "missing" | "unreachable" | "invalid" | "storage"} DocPackErrorReason
+ */
+
 /** A problem with a pack, worded for the person who added it. */
 export class DocPackError extends Error {
   name = "DocPackError";
+
+  /**
+   * @param {string} message
+   * @param {DocPackErrorReason} reason
+   */
+  constructor(message, reason) {
+    super(message);
+    this.reason = reason;
+  }
 }
 
 /**
@@ -74,7 +94,7 @@ export class DocPackError extends Error {
  */
 export function packUrl(input) {
   let text = String(input ?? "").trim();
-  if (!text) {
+  if (!text || /\s/.test(text)) {
     return null;
   }
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) {
@@ -85,6 +105,10 @@ export function packUrl(input) {
   try {
     url = new URL(text);
   } catch (error) {
+    return null;
+  }
+  // A site's name has a dot in it (example.com); only this computer doesn't.
+  if (!url.hostname.includes(".") && !isLocal(url)) {
     return null;
   }
   // Plain http only for a pack being tested on this computer.
@@ -197,6 +221,7 @@ export function readManifest(json, url) {
   if (!list) {
     throw new DocPackError(
       `${MANIFEST_FILENAME} should list the pack's docs, but it doesn't look like a doc pack.`,
+      "invalid",
     );
   }
 
@@ -210,6 +235,7 @@ export function readManifest(json, url) {
   if (packDocs(pack).length === 0) {
     throw new DocPackError(
       `${MANIFEST_FILENAME} lists no usable docs. Each needs a name and a slug such as "my_notes" or "my_notes~2".`,
+      "invalid",
     );
   }
   return pack;
@@ -266,6 +292,76 @@ function packDoc(raw, pack) {
     pack: pack.id,
     source_slug: sourceSlug,
   };
+}
+
+/**
+ * The built-in docs whose website or source code is at the address someone
+ * tried to add as a pack, e.g. `vuejs.org/guide` or `github.com/vuejs/docs`
+ * for Vue. Best match first.
+ *
+ * @param {unknown} input
+ * @param {{ name: string, links?: Record<string, string> }[]} docs
+ * @returns {string[]} The docs' names, once each.
+ */
+export function findBuiltInDocs(input, docs) {
+  const target = parseLoosely(input);
+  if (!target) {
+    return [];
+  }
+
+  /** @type {Map<string, number>} */
+  const scores = new Map();
+  for (const doc of docs) {
+    for (const link of Object.values(doc.links || {})) {
+      const url = parseLoosely(link);
+      if (!url || url.host !== target.host) {
+        continue;
+      }
+      // Either address may be the other's parent: the site's root for a doc
+      // that lives in a folder, or a page deep inside the doc.
+      const shared = commonSegments(url.segments, target.segments);
+      if (shared === Math.min(url.segments.length, target.segments.length)) {
+        scores.set(doc.name, Math.max(scores.get(doc.name) ?? -1, shared));
+      }
+    }
+  }
+  return [...scores].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+}
+
+/**
+ * @param {unknown} input
+ * @returns {{ host: string, segments: string[] } | null}
+ */
+function parseLoosely(input) {
+  let text = String(input ?? "").trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(text)) {
+    text = `https://${text}`;
+  }
+  try {
+    const url = new URL(text);
+    return {
+      host: url.hostname.replace(/^www\./, ""),
+      segments: url.pathname
+        .toLowerCase()
+        .split("/")
+        .filter(Boolean)
+        .filter((segment) => !/^(index\.html?|docs\.json)$/.test(segment)),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * @param {string[]} a
+ * @param {string[]} b
+ */
+function commonSegments(a, b) {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) {
+    i++;
+  }
+  return i;
 }
 
 /**

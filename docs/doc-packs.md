@@ -47,12 +47,17 @@ So the `public/docs` folder that `thor docs:generate <doc>` followed by `thor do
 - `name` and `slug` are required. A slug is lower-case letters, digits, `_` and `.`, with an optional version after a `~` (`notes~2`); it's also the doc's folder name.
 - `mtime` is when the doc was built. DevDocs offers an update to offline copies when it changes, so change it whenever the pages change.
 - `db_size` is the size of `db.json` in bytes, shown on the offline page.
+- `type` picks one of DevDocs' page styles; `simple` suits hand-written pages (section headings with bars, quotes shown as notes).
 
 A doc is shown under its own slug plus the pack's code (e.g. `/notes_mi5a07/`), so a pack can't replace a built-in doc or a doc from another pack.
 
+## Sharing a pack
+
+Push it to a public GitHub repository and give the repository the topic `devdocs-pack` (the gear next to *About* on its page), so that it's listed at [github.com/topics/devdocs-pack](https://github.com/topics/devdocs-pack), where the preferences send people looking for packs.
+
 ## Writing a pack by hand
 
-The example pack, [devdocs-pack-example](https://github.com/buggypather/devdocs-pack-example), builds `docs.json`, `index.json` and `db.json` from plain HTML pages with a small Node script (`node build.mjs`), which is enough for notes and small references.
+The example pack, [devdocs-pack-example](https://github.com/buggypather/devdocs-pack-example), builds `docs.json`, `index.json` and `db.json` from plain HTML pages with a small Node script (`node build.mjs`), which is enough for notes and small references. Its page "Writing pages" (`src/notes/guide/writing-pages.html`) is a template to copy.
 
 ## Safety
 

@@ -3,7 +3,14 @@
 import { app } from "../../app/app.js";
 import { Settings } from "../../app/settings.js";
 import { Docs } from "../../collections/docs.js";
-import { packDocs } from "../../lib/doc_packs.js";
+import {
+  FIND_PACKS_URL,
+  GUIDE_URL,
+  MANIFEST_FILENAME,
+  findBuiltInDocs,
+  packDocs,
+  packUrl,
+} from "../../lib/doc_packs.js";
 import { resetAnalytics } from "../../lib/page.js";
 import { $ } from "../../lib/util.js";
 import { Notif } from "../misc/notif.js";
@@ -22,6 +29,7 @@ export class SettingsPage extends View {
   static events = {
     click: "onClick",
     change: "onChange",
+    input: "onInput",
     keydown: "onKeydown",
   };
 
@@ -52,6 +60,7 @@ export class SettingsPage extends View {
       name: pack.name,
       count: packDocs(pack).length,
     }));
+    settings.docPackGuideUrl = GUIDE_URL;
     for (var layout of Settings.LAYOUTS) {
       settings[layout] = app.settings.hasLayout(layout);
     }
@@ -158,12 +167,26 @@ export class SettingsPage extends View {
       return;
     }
     button.disabled = true;
+    this.showPackHelp("");
     this.setPackStatus("Downloading the pack…");
 
     app.docPacks.add(input.value, (error, pack) => {
       if (error) {
         button.disabled = false;
-        this.setPackStatus(error.message, true);
+        this.setPackStatus("");
+        this.showPackHelp(
+          this.tmpl("docPackHelp", {
+            message: error.message,
+            reason: error.reason,
+            isGitHub: /^https:\/\/raw\.githubusercontent\.com\//.test(packUrl(input.value) || ""),
+            builtIn: findBuiltInDocs(
+              input.value,
+              app.docs.all().concat(app.disabledDocs.all()).filter((doc) => !doc.pack),
+            ),
+            guideUrl: GUIDE_URL,
+            findUrl: FIND_PACKS_URL,
+          }),
+        );
         return;
       }
       const count = packDocs(pack).length;
@@ -196,14 +219,30 @@ export class SettingsPage extends View {
     );
   }
 
+  /** @param {string} message */
+  setPackStatus(message) {
+    this.find("._doc-pack-status").textContent = message;
+  }
+
+  /** @param {string} html From the docPackHelp template, or empty to hide it. */
+  showPackHelp(html) {
+    this.find("._doc-pack-help").innerHTML = html;
+  }
+
   /**
-   * @param {string} message
-   * @param {boolean} [isError]
+   * Shows which file an address will be read from, as it's typed, so that a
+   * wrong address shows before it's tried.
+   *
+   * @param {ViewInputEvent} event
    */
-  setPackStatus(message, isError = false) {
-    const status = this.find("._doc-pack-status");
-    status.textContent = message;
-    status.classList.toggle("_error", isError);
+  onInput(event) {
+    if (event.target.name !== "packUrl") {
+      return;
+    }
+    const url = packUrl(event.target.value);
+    this.find("._doc-pack-preview").textContent = url
+      ? `Reads ${url}${MANIFEST_FILENAME}`
+      : "";
   }
 
   /** @param {ViewInputEvent} event */
