@@ -55,6 +55,12 @@ A doc is shown under its own slug plus the pack's code (e.g. `/notes_mi5a07/`), 
 
 Push it to a public GitHub repository and give the repository the topic `devdocs-pack` (the gear next to *About* on its page), so that it's listed at [github.com/topics/devdocs-pack](https://github.com/topics/devdocs-pack), where the preferences send people looking for packs.
 
+## From Markdown documentation
+
+Much documentation is written in Markdown in a public GitHub repository (GitHub's own docs, for instance, which docs.github.com is built from). The [pack builder](https://github.com/buggypather/devdocs-pack-builder) turns such a folder into a pack: copy the template repository, name the repository and folder in its `pack.config.json`, and a GitHub Actions workflow builds the pack, publishes it to the copy's `pack` branch and rebuilds it every week. The address to add in DevDocs is then `github.com/<you>/<copy>/tree/pack`.
+
+It understands GitHub's Markdown extensions and alerts, front matter (titles, intros and page order) and the Liquid tags of GitHub's docs and other Jekyll sites. Check that the documentation's licence allows sharing it, and credit its authors in `attribution`.
+
 ## Writing a pack by hand
 
 The example pack, [devdocs-pack-example](https://github.com/buggypather/devdocs-pack-example), builds `docs.json`, `index.json` and `db.json` from plain HTML pages with a small Node script (`node build.mjs`), which is enough for notes and small references. Its page "Writing pages" (`src/notes/guide/writing-pages.html`) is a template to copy.
