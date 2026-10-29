@@ -45,6 +45,7 @@ export class SettingsPage extends View {
     settings.smoothScroll = !app.settings.get("fastScroll");
     settings.arrowScroll = app.settings.get("arrowScroll");
     settings.noAutofocus = app.settings.get("noAutofocus");
+    settings.resume = !app.settings.get("noResume");
     settings.autoLatestVersion = app.settings.get("autoLatestVersion");
     settings.analyticsConsent = app.settings.get("analyticsConsent");
     settings.spaceScroll = app.settings.get("spaceScroll");
@@ -249,6 +250,9 @@ export class SettingsPage extends View {
   onChange(event) {
     const input = event.target;
     switch (input.name) {
+      case "resume":
+        app.settings.set("noResume", !input.checked);
+        break;
       case "packUrl":
         // Not a preference: it's only read when the pack is added.
         event.stopPropagation();

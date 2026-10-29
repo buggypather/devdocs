@@ -1,6 +1,7 @@
 // @ts-check
 
 import { app } from "../app/app.js";
+import { categoryOf } from "../app/categories.js";
 import { config } from "../app/config.js";
 import { Entries } from "../collections/entries.js";
 import { Types } from "../collections/types.js";
@@ -50,6 +51,7 @@ export class Doc extends Model {
       this.short_version = this.version.split(" ")[0];
     }
     this.text = this.toEntry().text;
+    this.category = categoryOf(this);
   }
 
   /**

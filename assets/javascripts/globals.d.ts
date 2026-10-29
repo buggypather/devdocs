@@ -140,6 +140,9 @@ declare module "./models/doc.js" {
     /** For a doc from a doc pack: its slug in the pack, before the pack's id was added. */
     source_slug?: string;
 
+    /** Derived: the category's id (see app/categories.js). */
+    category: string;
+
     /** Derived: the slug without its version. */
     slug_without_version: string;
     /** Derived: the name with the version appended. */

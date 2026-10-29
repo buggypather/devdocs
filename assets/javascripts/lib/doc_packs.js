@@ -19,6 +19,8 @@
  * This module has no dependency on the app, so it can be tested under Node.
  */
 
+import { isCategoryId } from "../app/categories.js";
+
 export const MANIFEST_FILENAME = "docs.json";
 
 /** A pack may list at most this many docs; anything past it is ignored. */
@@ -291,6 +293,8 @@ function packDoc(raw, pack) {
     origin: `${pack.url}${encodeURIComponent(sourceSlug)}/`,
     pack: pack.id,
     source_slug: sourceSlug,
+    // One of app/categories.js' ids; anything else is "Other".
+    category: isCategoryId(raw.category) ? raw.category : undefined,
   };
 }
 

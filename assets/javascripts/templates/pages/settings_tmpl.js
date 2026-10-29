@@ -137,6 +137,12 @@ export const settingsPage = (settings) => `\
       }>Disable autofocus of search input
     </label>
     <label class="_settings-label">
+      <input type="checkbox" form="settings" name="resume"${
+        settings.resume ? " checked" : ""
+      }>Reopen the page I was reading when DevDocs starts
+      <small>Opening DevDocs takes you back to the same place on the page. A link to a page still opens that page.</small>
+    </label>
+    <label class="_settings-label">
       <input type="checkbox" form="settings" name="autoLatestVersion" value="_auto-latest-version"${
         settings.autoLatestVersion ? " checked" : ""
       }>Automatically switch to the latest version of a documentation
