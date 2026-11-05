@@ -1,12 +1,12 @@
 module Docs
-  class Firebase
+  class Devsite
     class CleanHtmlFilter < Filter
       # The language of the code in each tab of a code sample.
       TAB_LANGUAGES = {
         'web' => 'javascript', 'web-namespaced-api' => 'javascript', 'node.js' => 'javascript',
         'nodejs' => 'javascript', 'node' => 'javascript', 'typescript' => 'typescript',
         'swift' => 'swift', 'objective-c' => 'objectivec', 'kotlin' => 'kotlin', 'kotlin+ktx' => 'kotlin',
-        'java' => 'java', 'android' => 'java', 'dart' => 'dart', 'flutter' => 'dart', 'python' => 'python',
+        'java' => 'java', 'android' => 'java', 'dart' => 'dart', 'flutter' => 'dart', 'python' => 'python', 'shell' => 'bash', 'bash' => 'bash', 'console' => 'bash', 'gcloud' => 'bash', 'curl' => 'bash',
         'go' => 'go', 'c++' => 'cpp', 'unity' => 'csharp', 'c#' => 'csharp', 'php' => 'php', 'ruby' => 'ruby'
       }
 
@@ -17,7 +17,7 @@ module Docs
         devsite-hats-survey devsite-video devsite-iframe
         .nocontent .devsite-github-link .devsite-article-meta .devsite-page-title-meta
         .devsite-floating-action-buttons .devsite-breadcrumb-list .video-wrapper .firebase-ai-prompt-cards
-        button script style iframe noscript
+        [data-devsite-section] button script style iframe noscript
       )
 
       def call
@@ -35,9 +35,17 @@ module Docs
         end
         body.css('.notranslate, .two-line-tab').each { |node| node.replace(node.children) }
 
+        # Some pages put a plain <h1> in the article instead of the usual title.
+        if !title && body.at_css('h1')
+          doc.children = body.inner_html
+          return doc
+        end
+
         heading = doc.document.create_element('h1')
+        title&.css('.devsite-page-title-meta, devsite-actions, .nocontent')&.remove
         # Landing pages (the docs' home, each product's) have no title of their own.
-        heading.content = title&.content&.squish.presence || (root_page? ? 'Firebase' : subpath.split('/').first.to_s.tr('-', ' ').capitalize)
+        heading.content = title&.content&.squish.presence ||
+                          (root_page? ? context[:devsite_root_title] || 'Documentation' : subpath.split('/').first.to_s.tr('-', ' ').capitalize)
         doc.children = heading.to_html + body.inner_html
         doc
       end
@@ -55,7 +63,7 @@ module Docs
           # "Web" comes twice, told apart by a smaller "modular API" / "namespaced API".
           variant = tab.at_css('[tab-label]')&.[]('tab-label').to_s.squish
           label = "#{label} (#{variant})" unless variant.empty?
-          tab.replace("<p class=\"_firebase-tab\"><strong>#{CGI.escapeHTML(label)}</strong></p>")
+          tab.replace("<p class=\"_code-tab\"><strong>#{CGI.escapeHTML(label)}</strong></p>")
         end
       end
 
